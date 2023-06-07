@@ -9,7 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
-const port = 3000;
+const port = 3001;
 app.use((0, cors_1.default)());
 app.use(body_parser_1.default.json());
 // Load JSON data from file
