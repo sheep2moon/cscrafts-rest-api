@@ -24,6 +24,7 @@ app.get("/sticker-collections", (req, res) => {
   const collectionNames = Object.keys(stickersData.data);
   res.json(collectionNames);
 });
+// collection_name
 app.get("/sticker-collection", (req, res) => {
   const collectionName = req.query.collection_name as string;
 
@@ -41,18 +42,28 @@ app.get("/sticker-collection", (req, res) => {
 
   res.json(collection);
 });
+// query collection_name?
 app.get("/sticker-search", (req, res) => {
   const query = req.query.query as string;
+  const collection_name = req.query.collection_name as string;
 
   if (!query) {
     res.status(400).json({ error: "Missing name parameter" });
     return;
   }
-
   const matchingItems: Sticker[] = [];
-  for (let collection in stickersData.data) {
+
+  if (!collection_name) {
+    for (let collection in stickersData.data) {
+      matchingItems.push(
+        ...stickersData.data[collection].filter((item) =>
+          item.name.toLowerCase().includes(query.toLowerCase())
+        )
+      );
+    }
+  } else {
     matchingItems.push(
-      ...stickersData.data[collection].filter((item) =>
+      ...stickersData.data[collection_name].filter((item) =>
         item.name.toLowerCase().includes(query.toLowerCase())
       )
     );
@@ -65,39 +76,12 @@ app.get("/sticker-search", (req, res) => {
 
   res.json(matchingItems);
 });
-app.get("/sticker-collection-search", (req, res) => {
-  const query = req.query.query as string;
-  const collection_name = req.query.collection_name as string;
 
-  if (!query || !collection_name) {
-    res
-      .status(400)
-      .json({ error: "Missing query or collection_name parameter" });
-    return;
-  }
-
-  const collection = stickersData.data[collection_name];
-  if (!collection) {
-    res.json({ error: "Collection not found" });
-    return;
-  }
-  const matchingItems: Sticker[] = [];
-  matchingItems.push(
-    ...stickersData.data[collection_name].filter((item) =>
-      item.name.toLowerCase().includes(query.toLowerCase())
-    )
-  );
-  if (matchingItems.length === 0) {
-    res.status(404).json({ error: "No stickers found" });
-    return;
-  }
-
-  res.json(matchingItems);
-});
 app.get("/weapon-types", (req, res) => {
   const weaponTypes = Object.keys(weaponsData.data);
   res.json(weaponTypes);
 });
+// weapon_type
 app.get("/weapons", (req, res) => {
   const weapon_type = req.query.weapon_type as string;
   if (!weapon_type) {
@@ -105,8 +89,13 @@ app.get("/weapons", (req, res) => {
     return;
   }
   const weapons = Object.keys(weaponsData.data[weapon_type]);
+  if (!weapons) {
+    res.status(404).json({ error: "No matching weapons" });
+    return;
+  }
   res.json(weapons);
 });
+// weapon_type weapon_name
 app.get("/weapon-skins", (req, res) => {
   const weapon_type = req.query.weapon_type as string;
   const weapon_name = req.query.weapon_name as string;
@@ -127,17 +116,16 @@ app.get("/weapon-skins", (req, res) => {
   }
   res.json(weaponSkins);
 });
-app.get("/skin-search", (req, res) => {
+// query weapon_type weapon_name
+app.get("/weapon-skin-search", (req, res) => {
   const query = req.query.query as string;
   const weapon_name = req.query.weapon_name as string;
   const weapon_type = req.query.weapon_type as string;
   // const weapon_types = Object.keys(weaponsData.data);
   if (!query || !weapon_name || !weapon_type) {
-    res
-      .status(400)
-      .json({
-        error: "Missing query,weapon_name or weapon_type query parameter/s",
-      });
+    res.status(400).json({
+      error: "Missing query,weapon_name or weapon_type query parameter/s",
+    });
     return;
   }
   const weaponsType = weaponsData.data[weapon_type];
@@ -164,6 +152,7 @@ app.get("/skin-search", (req, res) => {
   }
   res.json(matchingItems);
 });
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
