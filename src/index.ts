@@ -88,7 +88,10 @@ app.get("/weapons", (req, res) => {
     res.status(400).json({ error: "Missing weapon_type query parameter" });
     return;
   }
-  const weapons = Object.keys(weaponsData.data[weapon_type]);
+  const weapons = Object.keys(weaponsData.data[weapon_type]).map((key) => ({
+    name: key,
+    img_src: weaponsData.data[weapon_type][key].img_src,
+  }));
   if (!weapons) {
     res.status(404).json({ error: "No matching weapons" });
     return;
