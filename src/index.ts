@@ -165,7 +165,7 @@ app.get("/weapon-skin-search", (req, res) => {
   res.json(matchingItems);
 });
 
-app.get("/craft-search", async (req, res) => {
+app.post("/craft-search", async (req, res) => {
   const craft: Craft = req.body;
   const stickerQuery = craft.stickers.join(",");
 
