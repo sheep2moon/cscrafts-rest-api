@@ -20,3 +20,16 @@ export interface WeaponsData {
     };
   };
 }
+
+export type Craft = {
+  weapon: string;
+  exteriors: number[];
+  stickers: Array<Sticker | null>;
+  exterior_tag: string;
+};
+
+export type CraftSearchResult = {
+  name: string;
+  price: string;
+  img_src: string;
+};

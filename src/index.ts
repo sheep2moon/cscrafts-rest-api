@@ -3,7 +3,16 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
-import { Sticker, StickersData, WeaponSkin, WeaponsData } from "./global-types";
+import {
+  Craft,
+  CraftSearchResult,
+  Sticker,
+  StickersData,
+  WeaponSkin,
+  WeaponsData,
+} from "./global-types";
+import jsdom from "jsdom";
+// import fetch from "node-fetch";
 
 const app = express();
 const port = 3001;
@@ -154,6 +163,75 @@ app.get("/weapon-skin-search", (req, res) => {
     return;
   }
   res.json(matchingItems);
+});
+
+app.get("/craft-search", async (req, res) => {
+  const craft: Craft = req.body;
+  const stickerQuery = craft.stickers.join(",");
+
+  if (!craft.stickers) {
+    res.status(400).json({ error: "Missing stickers value" });
+    return;
+  }
+  if (!craft.exteriors) {
+    res.status(400).json({ error: "Missing exteriors value" });
+    return;
+  }
+  if (!craft.weapon) {
+    res.status(400).json({ error: "Missing weapon value" });
+    return;
+  }
+
+  const exteriorQueries = craft.exteriors.map(
+    (wearCategory) =>
+      `&category_730_Exterior%5B%5D=tag_WearCategory${wearCategory}`
+  );
+  const exteriorQuery = exteriorQueries.join("");
+
+  const searchQuery =
+    "http://steamcommunity.com/market/search?q=%22" +
+    encodeURIComponent(stickerQuery) +
+    "%22&descriptions=1&category_730_ItemSet%5B%5D=any" +
+    exteriorQuery +
+    "&category_730_Weapon%5B%5D=tag_weapon_" +
+    craft.weapon.toLowerCase() +
+    "&category_730_Quality%5B%5D=" +
+    craft.exterior_tag +
+    "#p1_price_asc";
+
+  const steamRes = await fetch(searchQuery);
+  const html = await steamRes.text();
+  const dom = new jsdom.JSDOM(html);
+
+  const resultDivs = dom.window.document.querySelectorAll(
+    ".market_listing_searchresult"
+  );
+
+  if (resultDivs.length === 0) {
+    res.status(404).json({ error: "Skins not found" });
+    return;
+  }
+
+  const matching: Array<CraftSearchResult> = [];
+
+  resultDivs.forEach((resultDiv) => {
+    const result: CraftSearchResult = {
+      name:
+        resultDiv.querySelector(".market_listing_item_name")?.textContent || "",
+      price:
+        resultDiv.querySelector(".market_table_value .normal_price")
+          ?.textContent || "",
+      img_src: resultDiv.querySelector("img")?.getAttribute("src") || "",
+    };
+    matching.push(result);
+  });
+  console.log(matching);
+
+  if (matching.length > 0) {
+    res.status(200).json(matching);
+  } else {
+    res.status(400).json({ error: "No matching crafts" });
+  }
 });
 
 app.listen(port, () => {

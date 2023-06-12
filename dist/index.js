@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,6 +18,8 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const cors_1 = __importDefault(require("cors"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const jsdom_1 = __importDefault(require("jsdom"));
+// import fetch from "node-fetch";
 const app = (0, express_1.default)();
 const port = 3001;
 app.use((0, cors_1.default)());
@@ -138,6 +149,58 @@ app.get("/weapon-skin-search", (req, res) => {
     }
     res.json(matchingItems);
 });
+app.get("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const craft = req.body;
+    const stickerQuery = craft.stickers.join(",");
+    if (!craft.stickers) {
+        res.status(400).json({ error: "Missing stickers value" });
+        return;
+    }
+    if (!craft.exteriors) {
+        res.status(400).json({ error: "Missing exteriors value" });
+        return;
+    }
+    if (!craft.weapon) {
+        res.status(400).json({ error: "Missing weapon value" });
+        return;
+    }
+    const exteriorQueries = craft.exteriors.map((wearCategory) => `&category_730_Exterior%5B%5D=tag_WearCategory${wearCategory}`);
+    const exteriorQuery = exteriorQueries.join("");
+    const searchQuery = "http://steamcommunity.com/market/search?q=%22" +
+        encodeURIComponent(stickerQuery) +
+        "%22&descriptions=1&category_730_ItemSet%5B%5D=any" +
+        exteriorQuery +
+        "&category_730_Weapon%5B%5D=tag_weapon_" +
+        craft.weapon.toLowerCase() +
+        "&category_730_Quality%5B%5D=" +
+        craft.exterior_tag +
+        "#p1_price_asc";
+    const steamRes = yield fetch(searchQuery);
+    const html = yield steamRes.text();
+    const dom = new jsdom_1.default.JSDOM(html);
+    const resultDivs = dom.window.document.querySelectorAll(".market_listing_searchresult");
+    if (resultDivs.length === 0) {
+        res.status(404).json({ error: "Skins not found" });
+        return;
+    }
+    const matching = [];
+    resultDivs.forEach((resultDiv) => {
+        var _a, _b, _c;
+        const result = {
+            name: ((_a = resultDiv.querySelector(".market_listing_item_name")) === null || _a === void 0 ? void 0 : _a.textContent) || "",
+            price: ((_b = resultDiv.querySelector(".market_table_value .normal_price")) === null || _b === void 0 ? void 0 : _b.textContent) || "",
+            img_src: ((_c = resultDiv.querySelector("img")) === null || _c === void 0 ? void 0 : _c.getAttribute("src")) || "",
+        };
+        matching.push(result);
+    });
+    console.log(matching);
+    if (matching.length > 0) {
+        res.status(200).json(matching);
+    }
+    else {
+        res.status(400).json({ error: "No matching crafts" });
+    }
+}));
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
