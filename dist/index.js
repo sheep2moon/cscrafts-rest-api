@@ -149,7 +149,7 @@ app.get("/weapon-skin-search", (req, res) => {
     }
     res.json(matchingItems);
 });
-app.get("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const craft = req.body;
     const stickerQuery = craft.stickers.join(",");
     if (!craft.stickers) {
