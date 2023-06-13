@@ -50,6 +50,12 @@ app.get("/sticker-collection", (req, res) => {
     }
     res.json(collection);
 });
+// app.get("/sticker",(req,res) => {
+//   const stickerName = req.query.sticker_name as string;
+//   if (!stickerName){
+//     res.status(400).json({error: "Missing sticker name query parameter"})
+//   }
+// })
 // query collection_name?
 app.get("/sticker-search", (req, res) => {
     const query = req.query.query;
@@ -160,8 +166,10 @@ app.post("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(400).json({ error: "Missing exteriors value" });
         return;
     }
-    if (!craft.weapon) {
-        res.status(400).json({ error: "Missing weapon value" });
+    if (!craft.weapon_tag) {
+        res.status(400).json({
+            error: "Missing weapon value, if you want any you should pass string 'any' ",
+        });
         return;
     }
     const exteriorQueries = craft.exteriors.map((wearCategory) => `&category_730_Exterior%5B%5D=tag_WearCategory${wearCategory}`);
@@ -170,30 +178,31 @@ app.post("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, functi
         encodeURIComponent(stickerQuery) +
         "%22&descriptions=1&category_730_ItemSet%5B%5D=any" +
         exteriorQuery +
-        "&category_730_Weapon%5B%5D=tag_weapon_" +
-        craft.weapon.toLowerCase() +
+        "&category_730_Weapon%5B%5D=" +
+        craft.weapon_tag +
         "&category_730_Quality%5B%5D=" +
-        craft.exterior_tag +
+        craft.type_tag +
         "#p1_price_asc";
     const steamRes = yield fetch(searchQuery);
     const html = yield steamRes.text();
     const dom = new jsdom_1.default.JSDOM(html);
-    const resultDivs = dom.window.document.querySelectorAll(".market_listing_searchresult");
-    if (resultDivs.length === 0) {
+    const resultLinks = dom.window.document.querySelectorAll(".market_listing_row_link");
+    if (resultLinks.length === 0) {
         res.status(404).json({ error: "Skins not found" });
         return;
     }
     const matching = [];
-    resultDivs.forEach((resultDiv) => {
+    resultLinks.forEach((resultLink) => {
         var _a, _b, _c;
         const result = {
-            name: ((_a = resultDiv.querySelector(".market_listing_item_name")) === null || _a === void 0 ? void 0 : _a.textContent) || "",
-            price: ((_b = resultDiv.querySelector(".market_table_value .normal_price")) === null || _b === void 0 ? void 0 : _b.textContent) || "",
-            img_src: ((_c = resultDiv.querySelector("img")) === null || _c === void 0 ? void 0 : _c.getAttribute("src")) || "",
+            name: ((_a = resultLink.querySelector(".market_listing_item_name")) === null || _a === void 0 ? void 0 : _a.textContent) ||
+                "",
+            price: ((_b = resultLink.querySelector(".market_table_value .normal_price")) === null || _b === void 0 ? void 0 : _b.textContent) || "",
+            img_src: ((_c = resultLink.querySelector("img")) === null || _c === void 0 ? void 0 : _c.getAttribute("src")) || "",
+            market_url: resultLink.getAttribute("href") || "",
         };
         matching.push(result);
     });
-    console.log(matching);
     if (matching.length > 0) {
         res.status(200).json(matching);
     }

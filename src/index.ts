@@ -36,21 +36,26 @@ app.get("/sticker-collections", (req, res) => {
 // collection_name
 app.get("/sticker-collection", (req, res) => {
   const collectionName = req.query.collection_name as string;
-
   if (!collectionName) {
     res.status(400).json({ error: "Missing collection_name parameter" });
     return;
   }
-
   const collection = stickersData.data[collectionName];
-
   if (!collection) {
     res.status(404).json({ error: "Collection not found" });
     return;
   }
-
   res.json(collection);
 });
+
+// app.get("/sticker",(req,res) => {
+//   const stickerName = req.query.sticker_name as string;
+//   if (!stickerName){
+//     res.status(400).json({error: "Missing sticker name query parameter"})
+//   }
+
+// })
+
 // query collection_name?
 app.get("/sticker-search", (req, res) => {
   const query = req.query.query as string;
@@ -177,8 +182,11 @@ app.post("/craft-search", async (req, res) => {
     res.status(400).json({ error: "Missing exteriors value" });
     return;
   }
-  if (!craft.weapon) {
-    res.status(400).json({ error: "Missing weapon value" });
+  if (!craft.weapon_tag) {
+    res.status(400).json({
+      error:
+        "Missing weapon value, if you want any you should pass string 'any' ",
+    });
     return;
   }
 
@@ -193,39 +201,40 @@ app.post("/craft-search", async (req, res) => {
     encodeURIComponent(stickerQuery) +
     "%22&descriptions=1&category_730_ItemSet%5B%5D=any" +
     exteriorQuery +
-    "&category_730_Weapon%5B%5D=tag_weapon_" +
-    craft.weapon.toLowerCase() +
+    "&category_730_Weapon%5B%5D=" +
+    craft.weapon_tag +
     "&category_730_Quality%5B%5D=" +
-    craft.exterior_tag +
+    craft.type_tag +
     "#p1_price_asc";
 
   const steamRes = await fetch(searchQuery);
   const html = await steamRes.text();
   const dom = new jsdom.JSDOM(html);
 
-  const resultDivs = dom.window.document.querySelectorAll(
-    ".market_listing_searchresult"
+  const resultLinks = dom.window.document.querySelectorAll(
+    ".market_listing_row_link"
   );
 
-  if (resultDivs.length === 0) {
+  if (resultLinks.length === 0) {
     res.status(404).json({ error: "Skins not found" });
     return;
   }
 
   const matching: Array<CraftSearchResult> = [];
 
-  resultDivs.forEach((resultDiv) => {
+  resultLinks.forEach((resultLink) => {
     const result: CraftSearchResult = {
       name:
-        resultDiv.querySelector(".market_listing_item_name")?.textContent || "",
+        resultLink.querySelector(".market_listing_item_name")?.textContent ||
+        "",
       price:
-        resultDiv.querySelector(".market_table_value .normal_price")
+        resultLink.querySelector(".market_table_value .normal_price")
           ?.textContent || "",
-      img_src: resultDiv.querySelector("img")?.getAttribute("src") || "",
+      img_src: resultLink.querySelector("img")?.getAttribute("src") || "",
+      market_url: resultLink.getAttribute("href") || "",
     };
     matching.push(result);
   });
-  console.log(matching);
 
   if (matching.length > 0) {
     res.status(200).json(matching);

@@ -22,14 +22,15 @@ export interface WeaponsData {
 }
 
 export type Craft = {
-  weapon: string;
+  weapon_tag: string;
   exteriors: number[];
-  stickers: Array<Sticker | null>;
-  exterior_tag: string;
+  stickers: Array<string>;
+  type_tag: string;
 };
 
 export type CraftSearchResult = {
   name: string;
   price: string;
   img_src: string;
+  market_url: string;
 };
