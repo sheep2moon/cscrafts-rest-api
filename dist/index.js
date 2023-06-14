@@ -191,20 +191,31 @@ app.post("/craft-search", (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(404).json({ error: "Skins not found" });
         return;
     }
-    const matching = [];
-    resultLinks.forEach((resultLink) => {
-        var _a, _b, _c;
-        const result = {
-            name: ((_a = resultLink.querySelector(".market_listing_item_name")) === null || _a === void 0 ? void 0 : _a.textContent) ||
-                "",
-            price: ((_b = resultLink.querySelector(".market_table_value .normal_price")) === null || _b === void 0 ? void 0 : _b.textContent) || "",
-            img_src: ((_c = resultLink.querySelector("img")) === null || _c === void 0 ? void 0 : _c.getAttribute("src")) || "",
-            market_url: resultLink.getAttribute("href") || "",
-        };
-        matching.push(result);
+    const findMatchings = () => __awaiter(void 0, void 0, void 0, function* () {
+        var _a, _b, _c, _d;
+        const matching = [];
+        for (let i = 0; i < resultLinks.length; i++) {
+            const resultLink = resultLinks[i];
+            const itemDataHash = (_a = resultLink
+                .querySelector(".market_listing_row")) === null || _a === void 0 ? void 0 : _a.getAttribute("data-hash-name");
+            const itemPricesRes = yield fetch(`https://steamcommunity.com/market/priceoverview/?appid=730&market_hash_name=${encodeURIComponent(itemDataHash)}&currency=1`);
+            const itemPrices = yield itemPricesRes.json();
+            const result = {
+                name: ((_b = resultLink.querySelector(".market_listing_item_name")) === null || _b === void 0 ? void 0 : _b.textContent) ||
+                    "",
+                price: ((_c = resultLink.querySelector(".market_table_value .normal_price")) === null || _c === void 0 ? void 0 : _c.textContent) || "",
+                img_src: ((_d = resultLink.querySelector("img")) === null || _d === void 0 ? void 0 : _d.getAttribute("src")) || "",
+                market_url: resultLink.getAttribute("href") || "",
+                lowest_price: itemPrices === null || itemPrices === void 0 ? void 0 : itemPrices.lowest_price,
+                median_price: itemPrices === null || itemPrices === void 0 ? void 0 : itemPrices.median_price,
+            };
+            matching.push(result);
+        }
+        return matching;
     });
-    if (matching.length > 0) {
-        res.status(200).json(matching);
+    const results = yield findMatchings();
+    if (results.length > 0) {
+        res.status(200).json(results);
     }
     else {
         res.status(400).json({ error: "No matching crafts" });

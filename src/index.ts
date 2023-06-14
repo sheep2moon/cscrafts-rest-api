@@ -220,24 +220,41 @@ app.post("/craft-search", async (req, res) => {
     return;
   }
 
-  const matching: Array<CraftSearchResult> = [];
+  const findMatchings = async () => {
+    const matching: Array<CraftSearchResult> = [];
 
-  resultLinks.forEach((resultLink) => {
-    const result: CraftSearchResult = {
-      name:
-        resultLink.querySelector(".market_listing_item_name")?.textContent ||
-        "",
-      price:
-        resultLink.querySelector(".market_table_value .normal_price")
-          ?.textContent || "",
-      img_src: resultLink.querySelector("img")?.getAttribute("src") || "",
-      market_url: resultLink.getAttribute("href") || "",
-    };
-    matching.push(result);
-  });
+    for (let i = 0; i < resultLinks.length; i++) {
+      const resultLink = resultLinks[i];
+      const itemDataHash = resultLink
+        .querySelector(".market_listing_row")
+        ?.getAttribute("data-hash-name") as string;
+      const itemPricesRes = await fetch(
+        `https://steamcommunity.com/market/priceoverview/?appid=730&market_hash_name=${encodeURIComponent(
+          itemDataHash
+        )}&currency=1`
+      );
+      const itemPrices = await itemPricesRes.json();
+      const result: CraftSearchResult = {
+        name:
+          resultLink.querySelector(".market_listing_item_name")?.textContent ||
+          "",
+        price:
+          resultLink.querySelector(".market_table_value .normal_price")
+            ?.textContent || "",
+        img_src: resultLink.querySelector("img")?.getAttribute("src") || "",
+        market_url: resultLink.getAttribute("href") || "",
+        lowest_price: itemPrices?.lowest_price,
+        median_price: itemPrices?.median_price,
+      };
+      matching.push(result);
+    }
 
-  if (matching.length > 0) {
-    res.status(200).json(matching);
+    return matching;
+  };
+
+  const results: Array<CraftSearchResult> = await findMatchings();
+  if (results.length > 0) {
+    res.status(200).json(results);
   } else {
     res.status(400).json({ error: "No matching crafts" });
   }
